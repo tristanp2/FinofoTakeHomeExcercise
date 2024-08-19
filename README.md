@@ -49,10 +49,8 @@ After parsing the sheet using the above algorithm, retrieving the projection val
 - If calculation for field F is dependent only on other values for month M, calculate their values first, then return calculated value
 - If calculation for field F differs depending on month, look up the specific calculation used for month M, then return calculated value
 
+Each calculation object can contain other calculation objects as parameter. Therefore a calculation object can be represented as an expression tree, then executed.
+
 ### Comments
 
-The algorithm above is what I came up with based on the relatively limited information provided. My approach would likely change with more information regarding the exact intended use of the data after parsing, the input formats that are expected to be parsed, and the nature of the formulas contained in the input sheets. For example, I made the assumption that projection calculations for things like "Product Sales" will use calculations solely based on historical data, as is the case in the provided sheet. If you wanted to allow users to change the calculation in any specific month, it would make more sense to store each projection calculation as it is presented in the sheet. I.e The "Product Sales" calculation for Sept 2024 would just be a calculation with a reference to the previous month's calculation.
-
-
-
-
+The algorithm above is what I came up with based on the relatively limited information provided. My approach would likely change with more information regarding the exact intended use of the data after parsing, the input formats that are expected to be parsed, and the nature of the formulas contained in the input sheets. For example, I made the assumption that projection calculations for things like "Product Sales" will use calculations solely based on historical data, as is the case in the provided sheet. If you wanted to allow users to change the calculation in any specific month, it would make more sense to store each projection calculation as it is presented in the sheet. i.e The "Product Sales" calculation for Sept 2024 would just be a calculation with a reference to the previous month's calculation. 
