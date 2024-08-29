@@ -25,32 +25,16 @@ From this, I believe that a good structure in which to store this data is as fol
 3. Determine where historical data ends and projection data starts. This could be done by either of the following methods:
     - Based on month headers. Historical data will be any column with month previous to the current month. Projection data is any column from current month or after.
     - Based on labels in sheet. Depending on what we can expect for input sheet format, we could search for the Historical and Projection labels in the first occupied row of the sheet and note their locations
-4. Gather historical data
-    1. Start from first historical month header. Use month header as identifier for this set of historical data
-    2. Gather each cell value from the current column, associating each value with the corresponding field row number.
-    3. Store gathered values as data object for this month. Move to next month header
-    4. Stop if month header is next month or greater
-5. Parse and store projection formulas
-    1. Start at first cell under first projection month header
-    2. Create a tokenized version of each formula. The tokens will be any of the following:
-        - Reference to a previous month's field value
-        - Reference to another field's value of the same month
-        - Constant parameter. These will be treated as the tweakable values of each calculation
-    3. For each row of formulas, categorize and store the row's calculation as one of the following:
-        - Repeated formula dependent only on previous month's values. These formulas can be converted into a form that allows calculation based only on historical values and months out. For example, since the product sale formula is the same for every projection month, it can be simplified to (historical product sales) * (1.04)^n, where n is the number of months out
-        - Repeated formula dependent only on current month's values. For example, total sales is just the sum of product and service sales of the current month
-        - Month specific formulas. For example, projected marketing budget is equal to the July 2024 marketing budget until Feb 2025, where it changes to double the July 2024 marketing budget. These should be stored by projection month
-        - Formulas that only depend on constant parameters. This could be stored per month if the value differs, or just for the field row if the value is repeated
+4. Parse table cell contents. For each cell in the table:
+    1. Generate parse tree for formula in cell if it does not already exist
+    2. Find or generate parse trees for all cell references in tree until only cell references to literal values exist
+    3. Store parse tree for easy reference i.e in dictionaries with cell name as key, month as key, and each dependency as key
+5. Simplify trees if desired, as some trees can be easily collapsed. For example, the tree generated for a month's projected cost is just a cascade of multiplications by 1.04. Therefore it can be simplified to (historical month cost) * (1.04)^n, where n is the tree height, or the months out.
 
 #### Accessing data after parsing
 
-After parsing the sheet using the above algorithm, retrieving the projection value for field F on month M would happen as follows:
-- If calculation for field F is dependent on historical data and months out, retrieve historical data, calculate months out to month M, and return calculated value
-- If calculation for field F is dependent only on other values for month M, calculate their values first, then return calculated value
-- If calculation for field F differs depending on month, look up the specific calculation used for month M, then return calculated value
-
-Each calculation object can contain other calculation objects as parameter. Therefore a calculation object can be represented as an expression tree, then executed.
+After parsing the sheet using the above algorithm, we have parse trees generated for all occupied cells in the table. Storing these formulas in this way makes it easy to track base dependencies and calculate as needed. For example, calculating the projected product sales for a given month would be as simple as finding the parse tree by month and then traversing the parse tree. If a value like historical product sales is changed, we could look up all parse trees that depend on that value and recalculate.
 
 ### Comments
 
-The algorithm above is what I came up with based on the relatively limited information provided. My approach would likely change with more information regarding the exact intended use of the data after parsing, the input formats that are expected to be parsed, and the nature of the formulas contained in the input sheets. For example, I made the assumption that projection calculations for things like "Product Sales" will use calculations solely based on historical data, as is the case in the provided sheet. If you wanted to allow users to change the calculation in any specific month, it would make more sense to store each projection calculation as it is presented in the sheet. i.e The "Product Sales" calculation for Sept 2024 would just be a calculation with a reference to the previous month's calculation. 
+After giving this problem some more consideration, I've changed my approach to how I would parse and track formulas. I think using a general purpose Excel formula parser is the most robust approach, as it allows us to structure the sheet contents as parse trees, which makes it much easier to track dependencies as well as recalculate formulas. Using this approach also makes it easier to identify and simplify formulas that involve repeated operations. 
